@@ -4,6 +4,7 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../model/Todo');
+const {User} = require('./../model/User');
 
 const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
@@ -214,7 +215,16 @@ describe('POST /users', () => {
                 expect(typeof res.headers['x-auth']).toBe('string');
                 expect(res.body.email).toBe(email);
             })
-            .end(done);
+            .end((err, res) => {
+                if(err)
+                    return done(err);
+                
+                User.findOne({email}).then((user) => {
+                    expect(user).toBeTruthy();
+                    expect(user.password).not.toBe(password);
+                    done();
+                }).catch((e) => done(e));
+            });
     })
 
     it('should return validation error if invalid data provided', (done) => {
@@ -237,6 +247,53 @@ describe('POST /users', () => {
             })
             .expect(400)
             .end(done);
+    })
+});
+
+describe('POST /users/login', () => {
+    it('should login user and return auth token', (done) => {
+        request(app)
+            .post('/users/login')
+            .send({
+                email: users[1].email,
+                password: users[1].password
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(typeof res.headers['x-auth']).toBe('string');
+            })
+            .end((err, res) => {
+                if(err)
+                    return done(err);
+                
+                User.findById(users[1]._id).then((user)=> {
+                    expect(user.tokens[0].access).toBe('auth');
+                    expect(user.tokens[0].token).toEqual(res.headers['x-auth']);
+                    done();
+                }).catch( (e) => done(e));
+            })
+    });
+
+    it('should reject invalid login', (done) => {
+        request(app)
+            .post('/users/login')
+            .send({
+                email: users[1].email,
+                password: users[1].password + '1'
+            })
+            .expect(400)
+            .expect((res) => {
+                expect(res.headers['x-auth']).toBe(undefined);
+            })
+            .end((err, res) => {
+                if(err)
+                    return done(err);
+                
+                User.findById(users[1]._id).then((user)=> {
+                    expect(user.tokens.length).toBe(0);
+                    done();
+                }).catch( (e) => done(e));
+            })
     })
 })
 
