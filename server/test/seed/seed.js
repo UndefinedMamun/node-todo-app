@@ -4,27 +4,6 @@ const jwt = require('jsonwebtoken');
 const {Todo} = require('./../../model/Todo');
 const {User} = require('./../../model/User');
 
-
-
-const todos = [{
-    _id: new ObjectID(),
-    text: 'first test todo'
-},{
-    _id: new ObjectID(),
-    text: 'second test todo',
-    completed: true,
-    completedAt: 333
-
-}];
-
-
-const populateTodos = (done)=>{
-    Todo.remove({}).then(()=> {
-        return Todo.insertMany(todos);
-    }).then(()=> done());
-};
-
-
 const userOneId = new ObjectID();
 const userTwoId = new ObjectID();
 
@@ -39,7 +18,11 @@ const users = [{
 },{
     _id: userTwoId,
     email: 'test2@gmail.com',
-    password: 'test2password'
+    password: 'test2password',
+    tokens: [{
+        access: 'auth',
+        token: jwt.sign({_id: userTwoId, access: 'auth'}, 'abc123').toString()
+    }]
 }];
 
 const populateUsers = (done) => {
@@ -51,6 +34,26 @@ const populateUsers = (done) => {
     }).then(() => done());
 }
 
+
+const todos = [{
+    _id: new ObjectID(),
+    text: 'first test todo',
+    _creator: userOneId
+},{
+    _id: new ObjectID(),
+    text: 'second test todo',
+    completed: true,
+    completedAt: 333,
+    _creator: userTwoId
+
+}];
+
+
+const populateTodos = (done)=>{
+    Todo.remove({}).then(()=> {
+        return Todo.insertMany(todos);
+    }).then(()=> done());
+};
 
 
 
